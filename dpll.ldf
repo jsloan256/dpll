@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BaliProject version="3.2" title="dpll" device="LCMXO2-256HC-4SG32C" default_implementation="dpll_syn">
+    <Options/>
+    <Implementation title="dpll_syn" dir="dpll_syn" description="dpll_syn" synthesis="synplify" default_strategy="Strategy1">
+        <Options def_top="dpll"/>
+        <Source name="source/dpll.v" type="Verilog" type_short="Verilog">
+            <Options top_module="dpll"/>
+        </Source>
+        <Source name="source/edgedet.v" type="Verilog" type_short="Verilog">
+            <Options/>
+        </Source>
+        <Source name="dpll.lpf" type="Logic Preference" type_short="LPF">
+            <Options/>
+        </Source>
+    </Implementation>
+    <Strategy name="Strategy1" file="dpll1.sty"/>
+</BaliProject>
