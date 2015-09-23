@@ -10,5 +10,6 @@
 *.cfg
 *.aws
 dpll_syn/*
+dpll_lse/*
 dpll_design/*
 
