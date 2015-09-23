@@ -1,0 +1,14 @@
+##
+*.dmp
+*.xml
+*.zip
+*.html
+*.log
+*.tcr
+*.sty
+*.ini
+*.cfg
+*.aws
+dpll_syn/*
+dpll_design/*
+
