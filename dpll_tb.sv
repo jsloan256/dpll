@@ -32,14 +32,14 @@ class transaction;
    endfunction
 endclass
 
-module tr_tb;
-   transaction tr;
+module trn_tb;
+   transaction trn;
 
    initial begin
-      tr = new();
-      tr.fin_frequency = 444123;
-      tr.fin_phase = 90;
-      tr.display("TOP");
+      trn = new();
+      trn.fin_frequency = 444123;
+      trn.fin_phase = 90;
+      trn.display("TOP");
    end
 
    initial begin
@@ -47,3 +47,30 @@ module tr_tb;
       $dumpvars;   
    end
 endmodule
+
+class generator;
+   transaction trn;
+   mailbox #(transaction) g2d_mbx;     // Mailbox for data from generator to driver (g2d)
+   event done;                         // Generator has completed the requested number of transactions
+   event drv_next;                     // Driver has completed the previous transaction
+   event sco_next;                     // Scoreboard has completed the previous transcation
+   int count = 0;                      // Number of transactions to do per run()
+
+   function new (mailbox #(transaction) g2d_mbx);
+      this.g2d_mbx = g2d_mbx;
+      trn = new();
+   endfunction
+
+   task run();
+      repeat(count) begin
+         assert(trn.randomize) else $error("Randomization Failed");
+
+         trn.display("GEN");
+         g2d_mbx.put(trn);
+         @(drv_next);
+         @(sco_next);
+      end
+
+      ->done;
+   endtask
+endclass
