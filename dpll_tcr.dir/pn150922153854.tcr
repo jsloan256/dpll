@@ -1,7 +1,0 @@
-#Start recording tcl command: 9/22/2015 15:35:31
-#Project Location: C:/Users/John/Documents/Source/dpll; Project name: dpll
-prj_project new -name "dpll" -impl "dpll_syn" -dev LCMXO2-256HC-4SG32C -synthesis "synplify"
-prj_src add "C:/Users/John/Documents/Source/dpll/source/dpll.v" "C:/Users/John/Documents/Source/dpll/source/edgedet.v"
-prj_project save
-prj_run Export -impl dpll_syn -task Bitgen -forceAll
-#Stop recording: 9/22/2015 15:38:54
