@@ -1,12 +1,12 @@
 `timescale 1ns / 1ps
 
 class transaction;
-   rand integer fin_frequency;      // PLL clock input (clk_fin) frequency
-   rand integer fin_phase;          // PLL clock input (clk_fin) phase
-   integer fout_frequency;          // PLL clock output (clk_fout) frequency
-   integer fout_phase;              // PLL clock output (clk_fout) phase
-   integer fout8x_frequency;        // PLL 8x clock output (clk8x_fout) frequency
-   integer fout8x_phase;            // PLL 8x clock output (clk8x_fout) phase
+   rand int fin_frequency;      // PLL clock input (clk_fin) frequency
+   rand int fin_phase;          // PLL clock input (clk_fin) phase
+   int fout_frequency;          // PLL clock output (clk_fout) frequency
+   int fout_phase;              // PLL clock output (clk_fout) phase
+   int fout8x_frequency;        // PLL 8x clock output (clk8x_fout) frequency
+   int fout8x_phase;            // PLL 8x clock output (clk8x_fout) phase
 
    constraint fin_frequency_con {
       fin_frequency == 390625;
@@ -81,8 +81,8 @@ class driver;
    transaction trn;
    mailbox #(transaction) g2d_mbx;
    event drv_next;
-   integer fin_period;
-   integer fin_delay;
+   int fin_period;
+   int fin_delay;
 
    function new(mailbox #(transaction) g2d_mbx);
       this.g2d_mbx = g2d_mbx;
@@ -167,3 +167,46 @@ module drv_tb;
       $dumpvars;   
    end
 endmodule
+
+class monitor;
+   virtual dpll_if dif;
+   transaction trn;
+   mailbox #(transaction) m2s_mbx;
+   time fout_posedge;
+   time fout_last_posedge;
+   int fout_period;
+   real average_fout_period;
+
+   function new(mailbox #(transaction) m2s_mbx);
+      this.m2s_mbx = m2s_mbx;
+   endfunction
+
+   // TODO: Add parallel functions to calculate clk8_out frequency (and periods?)
+   task run();
+      trn = new();
+
+      forever begin
+         repeat(489) @(posedge dif.clk_fout); // Ignore the first 490 cycles of clk_fout;
+
+         @(posedge dif.clk_fout)
+         fout_posedge = $time;
+
+         average_fout_period = 0;
+         repeat(10) begin
+            @(posedge dif.clk_fout);
+            fout_last_posedge = fout_posedge;
+            fout_posedge = $time;
+            fout_period = fout_posedge - fout_last_posedge;
+            average_fout_period = average_fout_period + (1/10)*fout_period;
+
+            $display("[MON] fout_period = %s", fout_period);
+         end
+
+         $display("[MON] average_fout_period = %0f", average_fout_period);
+         trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
+
+         m2s_mbx.put(trn);
+         trn.display("MON");
+      end
+   endtask
+endclass
