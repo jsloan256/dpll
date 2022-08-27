@@ -263,7 +263,7 @@ class environment;
       drv.reset();
    endtask
 
-   task run();
+   task test();
       fork
          gen.run();
          drv.run();
@@ -275,6 +275,12 @@ class environment;
    task post_test();
       wait(gen.done.triggered);
       $finish();
+   endtask
+
+   task run();
+      pre_test();
+      test();
+      post_test();
    endtask
 endclass
 
