@@ -65,6 +65,7 @@ class generator;
       repeat(count) begin
          assert(trn.randomize) else $error("Randomization Failed");
 
+         $display("-----------------------------------------------------------------------------------------------------");
          trn.display("GEN");
          g2d_mbx.put(trn);
          @(next);
@@ -173,6 +174,7 @@ class monitor;
    time fout_posedge;
    time fout_last_posedge;
    int fout_period;
+   real sum_fout_periods;
    real average_fout_period;
 
    function new(mailbox #(transaction) m2s_mbx);
@@ -189,18 +191,16 @@ class monitor;
          @(posedge dif.clk_fout)
          fout_posedge = $time;
 
-         average_fout_period = 0;
+         sum_fout_periods = 0;
          repeat(10) begin
             @(posedge dif.clk_fout);
             fout_last_posedge = fout_posedge;
             fout_posedge = $time;
             fout_period = fout_posedge - fout_last_posedge;
-            average_fout_period = average_fout_period + (1/10)*fout_period;
-
-            $display("[MON] fout_period = %s", fout_period);
+            sum_fout_periods = sum_fout_periods + real'(fout_period);
          end
 
-         $display("[MON] average_fout_period = %0f", average_fout_period);
+         average_fout_period = sum_fout_periods / 10;
          trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
 
          m2s_mbx.put(trn);
