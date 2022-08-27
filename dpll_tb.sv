@@ -263,7 +263,7 @@ class environment;
       drv.reset();
    endtask
 
-   task tast();
+   task run();
       fork
          gen.run();
          drv.run();
@@ -277,3 +277,27 @@ class environment;
       $finish();
    endtask
 endclass
+
+module dpll_tb;
+   dpll_if dif ();
+   dpll dut (dif.clk, dif.reset, dif.clk_fin, dif.clk_fout, dif_clk8x_fout);
+
+   initial begin
+      dif.clk <= 0;
+   end
+
+   always #5 dif.clk <= ~dif.clk;
+
+   environment env;
+
+   initial begin
+      env = new(dif);
+      env.gen.count = 10;
+      env.run();
+   end
+
+   initial begin
+      $dumpfile("dump.vcd");
+      $dumpvars;   
+   end
+endmodule
