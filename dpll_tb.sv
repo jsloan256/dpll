@@ -79,12 +79,14 @@ class driver;
    virtual dpll_if dif;
    transaction trn;
    mailbox #(transaction) g2d_mbx;
+   mailbox #(transaction) d2s_mbx;
    event next;          // Only used for testing in drv_tb
    int fin_period;
    int fin_delay;
 
-   function new(mailbox #(transaction) g2d_mbx);
+   function new(mailbox #(transaction) g2d_mbx, mailbox #(transaction) d2s_mbx);
       this.g2d_mbx = g2d_mbx;
+      this.d2s_mbx = d2s_mbx;
    endfunction
 
    task reset();
@@ -99,6 +101,7 @@ class driver;
    task run();
       forever begin
          g2d_mbx.get(trn);
+         d2s_mbx.put(trn);       // Send a reference copy of the transaction to the scoreboard
          trn.display("DRV");
 
          fin_period = int'((1/(real'(trn.fin_frequency))) * 1000000000);
@@ -122,6 +125,7 @@ class driver;
    endtask
 endclass
 
+/*
 module drv_tb;
    generator gen;
    driver drv;
@@ -166,6 +170,7 @@ module drv_tb;
       $dumpvars;   
    end
 endmodule
+*/
 
 class monitor;
    virtual dpll_if dif;
@@ -211,19 +216,31 @@ endclass
 
 class scoreboard;
    mailbox #(transaction) m2s_mbx;
+   mailbox #(transaction) d2s_mbx;
    transaction trn;
+   transaction ref_trn;
    event next;
 
-   function new(mailbox #(transaction) m2s_mbx);
+   function new(mailbox #(transaction) m2s_mbx, mailbox #(transaction) d2s_mbx);
       this.m2s_mbx = m2s_mbx;
+      this.d2s_mbx = d2s_mbx;
    endfunction
 
    task run();
       forever begin
          m2s_mbx.get(trn);
+         d2s_mbx.get(ref_trn);
+         trn.fin_frequency = ref_trn.fin_frequency;
+         trn.fin_phase = ref_trn.fin_phase;
          trn.display("SCO");
 
          // Check output frequency and phase
+         if (trn.fout_frequency == 390625) begin
+            $display("[SCO] DATA MATCHED");
+         end
+         else begin
+            $display("[SCO] DATA MISMATCHED");
+         end
 
          ->next;
       end
@@ -238,19 +255,22 @@ class environment;
 
    mailbox #(transaction) g2d_mbx;
    mailbox #(transaction) m2s_mbx;
+   mailbox #(transaction) d2s_mbx;
 
    event g2s_next;
    virtual dpll_if dif;
 
    function new(virtual dpll_if dif);
       g2d_mbx = new();
-      gen = new(g2d_mbx);
-      drv = new(g2d_mbx);
-
       m2s_mbx = new();
-      mon = new(m2s_mbx);
-      sco = new(m2s_mbx);
+      d2s_mbx = new();
 
+      gen = new(g2d_mbx);
+      drv = new(g2d_mbx, d2s_mbx);
+
+      mon = new(m2s_mbx);
+      sco = new(m2s_mbx, d2s_mbx);
+ 
       this.dif = dif;
       drv.dif = this.dif;
       mon.dif = this.dif;
