@@ -53,8 +53,7 @@ class generator;
    transaction trn;
    mailbox #(transaction) g2d_mbx;     // Mailbox for data from generator to driver (g2d)
    event done;                         // Generator has completed the requested number of transactions
-   event drv_next;                     // Driver has completed the previous transaction
-   event sco_next;                     // Scoreboard has completed the previous transcation
+   event next;                         // Scoreboard has completed the previous transaction
    int count = 0;                      // Number of transactions to do per run()
 
    function new (mailbox #(transaction) g2d_mbx);
@@ -68,8 +67,7 @@ class generator;
 
          trn.display("GEN");
          g2d_mbx.put(trn);
-         @(drv_next);
-         // @(sco_next);      // Comment this line out to run drv_tb
+         @(next);
       end
 
       ->done;
@@ -80,7 +78,7 @@ class driver;
    virtual dpll_if dif;
    transaction trn;
    mailbox #(transaction) g2d_mbx;
-   event drv_next;
+   event next;          // Only used for testing in drv_tb
    int fin_period;
    int fin_delay;
 
@@ -118,7 +116,7 @@ class driver;
             dif.clk_fin = 1'b0;
          end
 
-         ->drv_next;
+         ->next;
       end
    endtask
 endclass
@@ -126,7 +124,7 @@ endclass
 module drv_tb;
    generator gen;
    driver drv;
-   event drv_next;
+   event d2g_next;
    event done;
    mailbox #(transaction) g2d_mbx;
 
@@ -146,8 +144,8 @@ module drv_tb;
       gen.count  = 5;
       drv.dif = dif;
 
-      drv.drv_next = drv_next;
-      gen.drv_next = drv_next;
+      drv.next = d2g_next;
+      gen.next = d2g_next;
    end
 
    initial begin
@@ -208,5 +206,74 @@ class monitor;
          m2s_mbx.put(trn);
          trn.display("MON");
       end
+   endtask
+endclass
+
+class scoreboard;
+   mailbox #(transaction) m2s_mbx;
+   transaction trn;
+   event next;
+
+   function new(mailbox #(transaction) m2s_mbx);
+      this.m2s_mbx = m2s_mbx;
+   endfunction
+
+   task run();
+      forever begin
+         m2s_mbx.get(trn);
+         trn.display("SCO");
+
+         // Check output frequency and phase
+
+         ->next;
+      end
+   endtask
+endclass
+
+class environment;
+   generator   gen;
+   driver      drv;
+   monitor     mon;
+   scoreboard  sco;
+
+   mailbox #(transaction) g2d_mbx;
+   mailbox #(transaction) m2s_mbx;
+
+   event g2s_next;
+   virtual dpll_if dif;
+
+   function new(virtual dpll_if dif);
+      g2d_mbx = new();
+      gen = new(g2d_mbx);
+      drv = new(g2d_mbx);
+
+      m2s_mbx = new();
+      mon = new(m2s_mbx);
+      sco = new(m2s_mbx);
+
+      this.dif = dif;
+      drv.dif = this.dif;
+      mon.dif = this.dif;
+
+      gen.next = g2s_next;
+      sco.next = g2s_next;
+   endfunction
+
+   task pre_test();
+      drv.reset();
+   endtask
+
+   task tast();
+      fork
+         gen.run();
+         drv.run();
+         mon.run();
+         sco.run();
+      join_any
+   endtask
+
+   task post_test();
+      wait(gen.done.triggered);
+      $finish();
    endtask
 endclass
