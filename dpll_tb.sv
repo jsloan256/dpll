@@ -1,42 +1,49 @@
 `timescale 1ns / 1ps
 
-module dpll_tb;
-   // Ports
-   reg clk = 0;
-   reg reset = 0;
-   reg clk_fin = 0;
-   wire clk_fout;
-   wire clk8x_fout;
+class transaction;
+   rand integer fin_frequency;      // PLL clock input (clk_fin) frequency
+   rand integer fin_phase;          // PLL clock input (clk_fin) phase
+   integer fout_frequency;          // PLL clock output (clk_fout) frequency
+   integer fout_phase;              // PLL clock output (clk_fout) phase
+   integer fout8x_frequency;        // PLL 8x clock output (clk8x_fout) frequency
+   integer fout8x_phase;            // PLL 8x clock output (clk8x_fout) phase
 
-   dpll dut (clk, reset, clk_fin, clk_fout, clk8x_fout);
+   constraint fin_frequency_con {
+      fin_frequency == 390625;
+   }
+
+   constraint fin_phase_con {
+      fin_phase >= -180;
+      fin_phase <= 180;
+   }
+
+   function void display(input string tag);
+      $display("[%0s] fin: %0d Hz %0d degrees\tfout: %0d Hz %0d degrees\tfout8x: %0d Hz %0d degrees ", tag, fin_frequency, fin_phase, fout_frequency, fout_phase, fout8x_frequency, fout8x_phase);
+   endfunction
+
+   function transaction copy();
+      copy = new();
+      copy.fin_frequency      = this.fin_frequency;
+      copy.fin_phase          = this.fin_phase;
+      copy.fout_frequency     = this.fout_frequency;
+      copy.fout_phase         = this.fout_phase;
+      copy.fout8x_frequency   = this.fout8x_frequency;
+      copy.fout8x_phase       = this.fout8x_phase;
+   endfunction
+endclass
+
+module tr_tb;
+   transaction tr;
 
    initial begin
-      begin
-         reset = 1'b1;
-         repeat(5) @(posedge clk);
-         reset = 1'b0;
-
-         #1000000;
-         $finish;
-      end
-   end
-
-   always
-      #5  clk = ! clk ;             // 100 MHz
-//    always
-//       #2560  clk_fin = ! clk_fin ;  // 100/256 MHz = 390.625 kHz
-//       #2500  clk_fin = ! clk_fin ;  // 100/256 MHz = 390.625 kHz
-//       #2700  clk_fin = ! clk_fin ;  // 100/256 MHz = 390.625 kHz
-
-   always begin
-      #400;
-//       #1500;
-      forever #1280  clk_fin = ! clk_fin ;  // 100/256 MHz = 390.625 kHz
-//       forever #1200  clk_fin = ! clk_fin ;  // 100/256 MHz = 390.625 kHz
+      tr = new();
+      tr.fin_frequency = 444123;
+      tr.fin_phase = 90;
+      tr.display("TOP");
    end
 
    initial begin
       $dumpfile("dump.vcd");
-      $dumpvars;
+      $dumpvars;   
    end
 endmodule

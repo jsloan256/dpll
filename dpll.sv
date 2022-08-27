@@ -4,7 +4,7 @@ module dpll
 (
    input clk,              // Master clock
    input reset,            // System reset (active high)
-   input clk_fin,          // Input clock to clock onto
+   input clk_fin,          // PLL clock input
    output reg clk_fout,    // PLL output clock
    output reg clk8x_fout   // PLL output 8x clock
 );
@@ -126,3 +126,11 @@ module dpll
       clk8x_fout     = !n_count[3];
    end
 endmodule
+
+interface dpll_if ();
+   logic clk;              // Master clock
+   logic reset;            // System reset (active high)
+   logic clk_fin;          // PLL clock input
+   logic clk_fout;         // PLL output clock
+   logic clk8x_fout;       // PLL output 8x clock
+endinterface
