@@ -2,34 +2,27 @@
 
 class transaction;
    rand int fin_frequency;      // PLL clock input (clk_fin) frequency
-   rand int fin_phase;          // PLL clock input (clk_fin) phase
    int fout_frequency;          // PLL clock output (clk_fout) frequency
    int fout_phase;              // PLL clock output (clk_fout) phase
    int fout8x_frequency;        // PLL 8x clock output (clk8x_fout) frequency
-   int fout8x_phase;            // PLL 8x clock output (clk8x_fout) phase
 
    constraint fin_frequency_con {
-      fin_frequency == 390625;
-   }
-
-   constraint fin_phase_con {
-      fin_phase >= 0;
-      fin_phase <= 360;
+      // Center of the lock range is 100 MHz / 2^32 = 390.625 kHz
+      fin_frequency >= 390625 - 200;
+      fin_frequency <= 390625 + 200;
    }
 
    function void display(input string tag);
-      $display("[%0s] fin: %7d Hz %3d degrees     fout: %7d Hz %3d degrees     fout8x: %7d Hz %3d degrees ",
-               tag, fin_frequency, fin_phase, fout_frequency, fout_phase, fout8x_frequency, fout8x_phase);
+      $display("[%0s] fin: %7d Hz     fout: %7d Hz %3d degrees  (from fin)     fout8x: %7d Hz",
+               tag, fin_frequency, fout_frequency, fout_phase, fout8x_frequency);
    endfunction
 
    function transaction copy();
       copy = new();
       copy.fin_frequency      = this.fin_frequency;
-      copy.fin_phase          = this.fin_phase;
       copy.fout_frequency     = this.fout_frequency;
       copy.fout_phase         = this.fout_phase;
       copy.fout8x_frequency   = this.fout8x_frequency;
-      copy.fout8x_phase       = this.fout8x_phase;
    endfunction
 endclass
 
@@ -66,7 +59,6 @@ class driver;
    mailbox #(transaction) d2m_mbx;
    event next;          // Only used for testing in drv_tb
    int fin_period;
-   int fin_delay;
 
    function new(mailbox #(transaction) g2d_mbx, mailbox #(transaction) d2m_mbx);
       this.g2d_mbx = g2d_mbx;
@@ -89,12 +81,10 @@ class driver;
          trn.display("DRV");
 
          fin_period = int'((1/(real'(trn.fin_frequency))) * 1000000000);
-         fin_delay = int'(real'(fin_period) * (real'(trn.fin_phase) / 360));
-         $display("[DRV] fin_period: %0d, fin_delay: %0d", fin_period, fin_delay);
+         $display("[DRV] fin_period: %0d", fin_period);
 
          dif.clk_fin = 1'b0;
          @(posedge dif.clk);
-         #(fin_delay);
 
          // Wait for about 1ms for the PLL to settle
          repeat(500) begin
