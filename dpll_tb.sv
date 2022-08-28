@@ -33,22 +33,6 @@ class transaction;
    endfunction
 endclass
 
-module trn_tb;
-   transaction trn;
-
-   initial begin
-      trn = new();
-      trn.fin_frequency = 444123;
-      trn.fin_phase = 90;
-      trn.display("TOP");
-   end
-
-   initial begin
-      $dumpfile("dump.vcd");
-      $dumpvars;   
-   end
-endmodule
-
 class generator;
    transaction trn;
    mailbox #(transaction) g2d_mbx;     // Mailbox for data from generator to driver (g2d)
@@ -125,53 +109,6 @@ class driver;
    endtask
 endclass
 
-/*
-module drv_tb;
-   generator gen;
-   driver drv;
-   event d2g_next;
-   event done;
-   mailbox #(transaction) g2d_mbx;
-
-   dpll_if dif ();
-   dpll dut (dif.clk, dif.reset, dif.clk_fin, dif.clk_fout, dif_clk8x_fout);
-
-   initial begin
-      dif.clk <= 0;
-   end
-
-   always #5 dif.clk <= ~dif.clk;
-
-   initial begin
-      g2d_mbx = new();
-      gen = new(g2d_mbx);
-      drv = new(g2d_mbx);
-      gen.count  = 5;
-      drv.dif = dif;
-
-      drv.next = d2g_next;
-      gen.next = d2g_next;
-   end
-
-   initial begin
-      drv.reset();
-
-      fork
-         gen.run();
-         drv.run();
-      join_none
-
-      wait(gen.done.triggered);
-      $finish();
-   end
-
-   initial begin
-      $dumpfile("dump.vcd");
-      $dumpvars;   
-   end
-endmodule
-*/
-
 class monitor;
    virtual dpll_if dif;
    transaction d2m_trn;
@@ -188,6 +125,10 @@ class monitor;
       this.d2m_mbx = d2m_mbx;
       this.m2s_mbx = m2s_mbx;
    endfunction
+
+//    task check_fout_frequency();
+// 
+//    endtask
 
    task run();
       forever begin
