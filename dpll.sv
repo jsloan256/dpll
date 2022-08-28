@@ -2,11 +2,11 @@
 
 module dpll
 (
-   input clk,              // Master clock
-   input reset,            // System reset (active high)
-   input clk_fin,          // PLL clock input
-   output reg clk_fout,    // PLL output clock
-   output reg clk8x_fout   // PLL output 8x clock
+   input clk,              //! Master clock
+   input reset,            //! System reset (active high)
+   input clk_fin,          //! PLL clock input
+   output reg clk_fout,    //! PLL output clock
+   output reg clk8x_fout   //! PLL output 8x clock
 );
 
    reg fout = 0;
@@ -22,6 +22,7 @@ module dpll
    reg id_out = 0;
    reg [6:0] n_count;
 
+   // Phase detector (simple XOR)
    always@(*) begin
       k_count_enable = clk_fin ^ fout;
    end
@@ -121,9 +122,9 @@ module dpll
 
    always@(*) begin
       fout           = n_count[6];
-      k_count_down   = n_count[5];
-      clk_fout       = !fout;
-      clk8x_fout     = !n_count[3];
+      k_count_down   = !n_count[5];
+      clk_fout       = fout;
+      clk8x_fout     = n_count[3];
    end
 endmodule
 
