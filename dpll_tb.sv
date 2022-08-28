@@ -115,20 +115,63 @@ class monitor;
    transaction m2s_trn;
    mailbox #(transaction) d2m_mbx;
    mailbox #(transaction) m2s_mbx;
-   time fout_posedge;
-   time fout_last_posedge;
-   int fout_period;
-   real sum_fout_periods;
-   real average_fout_period;
 
    function new(mailbox #(transaction) d2m_mbx, mailbox #(transaction) m2s_mbx);
       this.d2m_mbx = d2m_mbx;
       this.m2s_mbx = m2s_mbx;
    endfunction
 
-//    task check_fout_frequency();
-// 
-//    endtask
+   task check_fout_frequency();
+      time fout_posedge;
+      time fout_last_posedge;
+      int fout_period;
+      real sum_fout_periods;
+      real average_fout_period;
+
+      @(posedge dif.clk_fout)
+      fout_posedge = $time;
+
+      sum_fout_periods = 0;
+      repeat(10) begin
+         @(posedge dif.clk_fout);
+         fout_last_posedge = fout_posedge;
+         fout_posedge = $time;
+         fout_period = fout_posedge - fout_last_posedge;
+         sum_fout_periods = sum_fout_periods + real'(fout_period);
+      end
+
+      average_fout_period = sum_fout_periods / 10;
+      m2s_trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
+   endtask
+
+   task check_fout_phase();
+      time fin_posedge;
+      time fout_before_fin;
+      time fout_after_fin;
+      int fout_phase1;
+      int fout_phase2;
+
+      @(posedge dif.clk_fout);
+      fout_before_fin = $time;
+
+      @(posedge dif.clk_fin);
+      fin_posedge = $time;
+
+      @(posedge dif.clk_fout);
+      fout_after_fin = $time;
+
+      fout_phase1 = fin_posedge - fout_before_fin;
+      fout_phase2 = fout_after_fin - fin_posedge;
+
+      $display("[MON] %0d, %0d", fout_phase1, fout_phase2);
+
+      if (fout_phase1 <= fout_phase2) begin
+         m2s_trn.fout_phase = -(fout_phase1 * 360) / 2560;
+      end
+      else begin
+         m2s_trn.fout_phase = (fout_phase2 * 360) / 2560;
+      end
+   endtask
 
    task run();
       forever begin
@@ -136,21 +179,11 @@ class monitor;
          m2s_trn = d2m_trn.copy();     // to the transaction destined for the the scoreboard.
 
          repeat(489) @(posedge dif.clk_fout); // Ignore the first 490 cycles of clk_fout;
-
-         @(posedge dif.clk_fout)
-         fout_posedge = $time;
-
-         sum_fout_periods = 0;
-         repeat(10) begin
-            @(posedge dif.clk_fout);
-            fout_last_posedge = fout_posedge;
-            fout_posedge = $time;
-            fout_period = fout_posedge - fout_last_posedge;
-            sum_fout_periods = sum_fout_periods + real'(fout_period);
-         end
-
-         average_fout_period = sum_fout_periods / 10;
-         m2s_trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
+         
+         fork
+            check_fout_frequency();
+            check_fout_phase();
+         join
 
          m2s_mbx.put(m2s_trn);
          m2s_trn.display("MON");
