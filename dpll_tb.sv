@@ -324,7 +324,7 @@ module dpll_tb;
 
    initial begin
       env = new(dif);
-      env.gen.count = 100;
+      env.gen.count = 1000;
       env.run();
    end
 
