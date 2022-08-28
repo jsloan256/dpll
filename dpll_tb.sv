@@ -79,14 +79,14 @@ class driver;
    virtual dpll_if dif;
    transaction trn;
    mailbox #(transaction) g2d_mbx;
-   mailbox #(transaction) d2s_mbx;
+   mailbox #(transaction) d2m_mbx;
    event next;          // Only used for testing in drv_tb
    int fin_period;
    int fin_delay;
 
-   function new(mailbox #(transaction) g2d_mbx, mailbox #(transaction) d2s_mbx);
+   function new(mailbox #(transaction) g2d_mbx, mailbox #(transaction) d2m_mbx);
       this.g2d_mbx = g2d_mbx;
-      this.d2s_mbx = d2s_mbx;
+      this.d2m_mbx = d2m_mbx;
    endfunction
 
    task reset();
@@ -101,7 +101,7 @@ class driver;
    task run();
       forever begin
          g2d_mbx.get(trn);
-         d2s_mbx.put(trn);       // Send a reference copy of the transaction to the scoreboard
+         d2m_mbx.put(trn);       // Send a reference copy of the transaction to the scoreboard
          trn.display("DRV");
 
          fin_period = int'((1/(real'(trn.fin_frequency))) * 1000000000);
@@ -174,7 +174,9 @@ endmodule
 
 class monitor;
    virtual dpll_if dif;
-   transaction trn;
+   transaction d2m_trn;
+   transaction m2s_trn;
+   mailbox #(transaction) d2m_mbx;
    mailbox #(transaction) m2s_mbx;
    time fout_posedge;
    time fout_last_posedge;
@@ -182,15 +184,16 @@ class monitor;
    real sum_fout_periods;
    real average_fout_period;
 
-   function new(mailbox #(transaction) m2s_mbx);
+   function new(mailbox #(transaction) d2m_mbx, mailbox #(transaction) m2s_mbx);
+      this.d2m_mbx = d2m_mbx;
       this.m2s_mbx = m2s_mbx;
    endfunction
 
-   // TODO: Add parallel functions to calculate clk8_out frequency (and periods?)
    task run();
-      trn = new();
-
       forever begin
+         d2m_mbx.get(d2m_trn);         // Grab the transaction data from the driver and copy it
+         m2s_trn = d2m_trn.copy();     // to the transaction destined for the the scoreboard.
+
          repeat(489) @(posedge dif.clk_fout); // Ignore the first 490 cycles of clk_fout;
 
          @(posedge dif.clk_fout)
@@ -206,32 +209,27 @@ class monitor;
          end
 
          average_fout_period = sum_fout_periods / 10;
-         trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
+         m2s_trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
 
-         m2s_mbx.put(trn);
-         trn.display("MON");
+         m2s_mbx.put(m2s_trn);
+         m2s_trn.display("MON");
       end
    endtask
 endclass
 
 class scoreboard;
    mailbox #(transaction) m2s_mbx;
-   mailbox #(transaction) d2s_mbx;
    transaction trn;
    transaction ref_trn;
    event next;
 
-   function new(mailbox #(transaction) m2s_mbx, mailbox #(transaction) d2s_mbx);
+   function new(mailbox #(transaction) m2s_mbx);
       this.m2s_mbx = m2s_mbx;
-      this.d2s_mbx = d2s_mbx;
    endfunction
 
    task run();
       forever begin
          m2s_mbx.get(trn);
-         d2s_mbx.get(ref_trn);
-         trn.fin_frequency = ref_trn.fin_frequency;
-         trn.fin_phase = ref_trn.fin_phase;
          trn.display("SCO");
 
          // Check output frequency and phase
@@ -255,7 +253,7 @@ class environment;
 
    mailbox #(transaction) g2d_mbx;
    mailbox #(transaction) m2s_mbx;
-   mailbox #(transaction) d2s_mbx;
+   mailbox #(transaction) d2m_mbx;
 
    event g2s_next;
    virtual dpll_if dif;
@@ -263,13 +261,13 @@ class environment;
    function new(virtual dpll_if dif);
       g2d_mbx = new();
       m2s_mbx = new();
-      d2s_mbx = new();
+      d2m_mbx = new();
 
       gen = new(g2d_mbx);
-      drv = new(g2d_mbx, d2s_mbx);
+      drv = new(g2d_mbx, d2m_mbx);
 
-      mon = new(m2s_mbx);
-      sco = new(m2s_mbx, d2s_mbx);
+      mon = new(d2m_mbx, m2s_mbx);
+      sco = new(m2s_mbx);
  
       this.dif = dif;
       drv.dif = this.dif;

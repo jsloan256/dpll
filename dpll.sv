@@ -9,7 +9,6 @@ module dpll
    output reg clk8x_fout   //! PLL output 8x clock
 );
 
-   reg fout = 0;
    reg k_count_enable = 0;
    reg [7:0] k_count;
    reg k_count_down = 1;      // 1 to count down, 0 to count up
@@ -24,9 +23,10 @@ module dpll
 
    // Phase detector (simple XOR)
    always@(*) begin
-      k_count_enable = clk_fin ^ fout;
+      k_count_enable = clk_fin ^ clk_fout;
    end
 
+   // Up/down K-counter with borrow and carry outputs
    always@(posedge clk) begin
       if (reset == 1'b1) begin
          k_count <= 0;
@@ -59,6 +59,7 @@ module dpll
       end
    end
 
+   // Generate increment command to the I/D counter from the K-counter's carry output
    always@(posedge clk) begin
       if (reset == 1'b1) begin
          id_increment <= 0;
@@ -71,6 +72,7 @@ module dpll
       end
    end
 
+   // Generate decrement command to the I/D counter from the K-counter's borrow output
    always@(posedge clk) begin
       if (reset == 1'b1) begin
          id_decrement <= 0;
@@ -83,6 +85,9 @@ module dpll
       end
    end
 
+   // I/D counter: Generate the enable signal for the N-counter. When id_increment is received,
+   // add an additional 'high' cycle to id_out. When id_decrement is received, add an additional
+   // 'low' cycles to id_out.
    always@(posedge clk) begin
       if (reset == 1'b1) begin
          id_out <= 0;
@@ -111,6 +116,7 @@ module dpll
       end
    end
 
+   // N-counter: Counter rate controlled by I/D counter
    always@(posedge clk) begin
       if (reset == 1'b1) begin
          n_count <= 0;
@@ -121,10 +127,9 @@ module dpll
    end
 
    always@(*) begin
-      fout           = n_count[6];
-      k_count_down   = !n_count[5];
-      clk_fout       = fout;
+      clk_fout       = n_count[6];
       clk8x_fout     = n_count[3];
+      k_count_down   = !n_count[5];
    end
 endmodule
 

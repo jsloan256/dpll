@@ -6,7 +6,6 @@ add_wave dut/clk_fout     -into dut_ports -color cyan
 add_wave dut/clk8x_fout   -into dut_ports -color cyan
 
 add_wave_group dut_signals
-add_wave dut/fout                -into dut_signals
 add_wave dut/k_count_enable      -into dut_signals
 add_wave dut/k_count             -into dut_signals
 add_wave dut/k_count_down        -into dut_signals
