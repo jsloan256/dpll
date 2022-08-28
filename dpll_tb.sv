@@ -111,6 +111,7 @@ class monitor;
       this.m2s_mbx = m2s_mbx;
    endfunction
 
+   // Calculate the frequency of clk_fout using the after of 10 periods
    task check_fout_frequency();
       time fout_posedge;
       time fout_last_posedge;
@@ -134,6 +135,7 @@ class monitor;
       m2s_trn.fout_frequency = int'(1/(real'(average_fout_period)/1000000000));
    endtask
 
+   // Calculate the phase of clk_fout relative to clk_fin
    task check_fout_phase();
       time fin_posedge;
       time fout_before_fin;
@@ -153,14 +155,36 @@ class monitor;
       fout_phase1 = fin_posedge - fout_before_fin;
       fout_phase2 = fout_after_fin - fin_posedge;
 
-      $display("[MON] %0d, %0d", fout_phase1, fout_phase2);
-
       if (fout_phase1 <= fout_phase2) begin
          m2s_trn.fout_phase = -(fout_phase1 * 360) / 2560;
       end
       else begin
          m2s_trn.fout_phase = (fout_phase2 * 360) / 2560;
       end
+   endtask
+
+   // Calculate the frequency of clk8x_fout using the after of 10 periods
+   task check_fout8x_frequency();
+      time fout8x_posedge;
+      time fout8x_last_posedge;
+      int fout8x_period;
+      real sum_fout8x_periods;
+      real average_fout8x_period;
+
+      @(posedge dif.clk8x_fout)
+      fout8x_posedge = $time;
+
+      sum_fout8x_periods = 0;
+      repeat(10) begin
+         @(posedge dif.clk8x_fout);
+         fout8x_last_posedge = fout8x_posedge;
+         fout8x_posedge = $time;
+         fout8x_period = fout8x_posedge - fout8x_last_posedge;
+         sum_fout8x_periods = sum_fout8x_periods + real'(fout8x_period);
+      end
+
+      average_fout8x_period = sum_fout8x_periods / 10;
+      m2s_trn.fout8x_frequency = int'(1/(real'(average_fout8x_period)/1000000000));
    endtask
 
    task run();
@@ -173,6 +197,7 @@ class monitor;
          fork
             check_fout_frequency();
             check_fout_phase();
+            check_fout8x_frequency();
          join
 
          m2s_mbx.put(m2s_trn);
@@ -197,7 +222,8 @@ class scoreboard;
          trn.display("SCO");
 
          // Check output frequency and phase
-         if (trn.fout_frequency == 390625) begin
+         if ((trn.fout_frequency == 390625) && ((trn.fout_phase < 1) || (trn.fout_phase > -1))
+          && (trn.fout8x_frequency = 3125000)) begin
             $display("[SCO] DATA MATCHED");
          end
          else begin
@@ -268,7 +294,7 @@ endclass
 
 module dpll_tb;
    dpll_if dif ();
-   dpll dut (dif.clk, dif.reset, dif.clk_fin, dif.clk_fout, dif_clk8x_fout);
+   dpll dut (dif.clk, dif.reset, dif.clk_fin, dif.clk_fout, dif.clk8x_fout);
 
    initial begin
       dif.clk <= 0;
