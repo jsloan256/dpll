@@ -110,3 +110,17 @@ The testbench waits 490 clocks for the dpll output to settle, captures 10 clk_fo
 [SCO] fin:  390794 Hz     fout:  390930 Hz  18 degrees  (from fin)     fout8x:       0 Hz
 [SCO] DATA MISMATCHED
 ```
+
+After setting fin frequency constraint, I ran longer and longer runs to gather better lock statistics using [sco_summary.py](sco_summary.py) to parse the scoreboard logfile scolog.csv.
+
+## 10 runes
+```console
+$python3 sco_summary.py 
+Over 10 runs, successfully locked on to frequencies from 390446 to 390678
+which is 390.625 kHz -4.5824pmm 1.3568ppm
+```
+
+## 100 runs
+```console
+
+```

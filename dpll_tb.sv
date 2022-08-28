@@ -218,12 +218,12 @@ class scoreboard;
    endfunction
 
    task write_log_header();
-      $fdisplay("fin_frequency, fout_frequency, fout_phase, fout8x_frequency, matched");
+      $fdisplay(fd, "fin_frequency,fout_frequency,fout_phase,fout8x_frequency,matched");
 
    endtask
 
    task write_log_data(int matched);
-      $fdisplay(fd, "%7d, %7d, %3d, %7d",
+      $fdisplay(fd, "%0d,%0d,%0d,%0d,%0d",
                trn.fin_frequency, trn.fout_frequency, trn.fout_phase, trn.fout8x_frequency, matched);
    endtask
 
@@ -324,7 +324,7 @@ module dpll_tb;
 
    initial begin
       env = new(dif);
-      env.gen.count = 10;
+      env.gen.count = 100;
       env.run();
    end
 
