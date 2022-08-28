@@ -211,10 +211,21 @@ class scoreboard;
    transaction trn;
    transaction ref_trn;
    event next;
+   int fd;
 
    function new(mailbox #(transaction) m2s_mbx);
       this.m2s_mbx = m2s_mbx;
    endfunction
+
+   task write_log_header();
+      $fdisplay("fin_frequency, fout_frequency, fout_phase, fout8x_frequency, matched");
+
+   endtask
+
+   task write_log_data(int matched);
+      $fdisplay(fd, "%7d, %7d, %3d, %7d",
+               trn.fin_frequency, trn.fout_frequency, trn.fout_phase, trn.fout8x_frequency, matched);
+   endtask
 
    task run();
       forever begin
@@ -225,9 +236,11 @@ class scoreboard;
          if ((trn.fout_frequency == 390625) && ((trn.fout_phase < 1) || (trn.fout_phase > -1))
           && (trn.fout8x_frequency = 3125000)) begin
             $display("[SCO] DATA MATCHED");
+            write_log_data(1);
          end
          else begin
             $display("[SCO] DATA MISMATCHED");
+            write_log_data(0);
          end
 
          ->next;
@@ -268,6 +281,9 @@ class environment;
    endfunction
 
    task pre_test();
+      sco.fd = $fopen("./scolog.csv", "w");
+      sco.write_log_header();
+
       drv.reset();
    endtask
 
@@ -283,6 +299,8 @@ class environment;
    task post_test();
       wait(gen.done.triggered);
       $finish();
+
+      $fclose(sco.fd);
    endtask
 
    task run();
