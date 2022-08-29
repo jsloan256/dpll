@@ -324,7 +324,7 @@ module dpll_tb;
 
    initial begin
       env = new(dif);
-      env.gen.count = 1000;
+      env.gen.count = 10;
       env.run();
    end
 
@@ -333,3 +333,4 @@ module dpll_tb;
       $dumpvars;   
    end
 endmodule
+
