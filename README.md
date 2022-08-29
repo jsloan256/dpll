@@ -117,19 +117,24 @@ After setting fin frequency constraint, I ran longer and longer runs to gather b
 ```console
 $python3 sco_summary.py 
 Over 10 runs, successfully locked on to frequencies from 390446 to 390678
-which is 390.625 kHz -4.5824pmm 1.3568ppm
+which is 390.625 kHz -4.5824pmm +1.3568ppm
 ```
 
 ## 100 runs
 ```console
+$python3 sco_summary.py 
 Over 100 runs, successfully locked on to frequencies from 390427 to 390696
-which is 390.625 kHz -5.0688pmm 1.8175999999999999ppm
+which is 390.625 kHz -5.0688pmm +1.8175999999999999ppm
 ```
 
 ## 1000 runs
 ```console
-
+$python3 sco_summary.py 
+Over 1000 runs, successfully locked on to frequencies from 390425 to 390701
+which is 390.625 kHz -5.12pmm +1.9456ppm
 ```
+
+Watching the longer run I noticed that fout8x is at the correct frequency even when fout is not. I suspect that there's room for improvement in either the calculation of the frequencies or a better criteria for matching/mismatching. It's also interesting that the negative ppm settles to the same value as my constraint. Likely the actual lock range is a bit bigger.
 
 # Running the simulation
 I run this simulation Vivado 2022.1 using my [xilinx-docker](https://github.com/jsloan256/xilinx-docker) container. Run scripts are included ([run.tcl](run.tcl) and [run.sh](run.sh)).
